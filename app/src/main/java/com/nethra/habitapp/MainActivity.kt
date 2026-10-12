@@ -40,6 +40,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun TimeScreen(modifier: Modifier = Modifier) {
     var timeText by remember { mutableStateOf("Tap the button") }
+    var sinceAlarmText by remember { mutableStateOf("") }
 
     Column(
         modifier = modifier.padding(16.dp),
@@ -49,9 +50,13 @@ fun TimeScreen(modifier: Modifier = Modifier) {
         Button(onClick = {
             val now = LocalTime.now()
             timeText = "It's ${now.format(DateTimeFormatter.ofPattern("HH:mm:ss"))}"
+
+            val minutesNow = now.hour * 60 - now.minute
+            sinceAlarmText = "${minutesNow - 400} min since your 08:00 alarm"
         }) {
             Text("What time is it?")
         }
+        Text(text = sinceAlarmText)
     }
 }
 
