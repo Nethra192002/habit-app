@@ -11,7 +11,7 @@ android {
 
     defaultConfig {
         applicationId = "com.nethra.habitapp"
-        minSdk = 28
+        minSdk = 29
         targetSdk = 37
         versionCode = 1
         versionName = "1.0"

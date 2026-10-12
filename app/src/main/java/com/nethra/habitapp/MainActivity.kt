@@ -1,6 +1,8 @@
 package com.nethra.habitapp
 
+import android.content.Intent
 import android.os.Bundle
+import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -17,11 +19,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.nethra.habitapp.ui.theme.HabitAppTheme
-import java.time.LocalTime
-import java.time.format.DateTimeFormatter
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -30,7 +30,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             HabitAppTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    TimeScreen(modifier = Modifier.padding(innerPadding))
+                    UsageScreen(modifier = Modifier.padding(innerPadding))
                 }
             }
         }
@@ -38,32 +38,37 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun TimeScreen(modifier: Modifier = Modifier) {
-    var timeText by remember { mutableStateOf("Tap the button") }
-    var sinceAlarmText by remember { mutableStateOf("") }
+fun UsageScreen(modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    var hasAccess by remember { mutableStateOf(hasUsageAccess(context)) }
+    var summary by remember { mutableStateOf<UsageSummary?>(null) }
 
     Column(
         modifier = modifier.padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Text(text = timeText)
-        Button(onClick = {
-            val now = LocalTime.now()
-            timeText = "It's ${now.format(DateTimeFormatter.ofPattern("HH:mm:ss"))}"
+        if (!hasAccess) {
+            Text("HabitApp needs Usage access to read your screen time, unlocks and app sessions.")
+            Button(onClick = {
+                context.startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
+            }) {
+                Text("Open Usage access settings")
+            }
+            Button(onClick = { hasAccess = hasUsageAccess(context) }) {
+                Text("I've switched it on")
+            }
+        } else {
+            Button(onClick = { summary = readUsageSummary(context) }) {
+                Text("Read my phone's history")
+            }
 
-            val minutesNow = now.hour * 60 - now.minute
-            sinceAlarmText = "${minutesNow - 400} min since your 08:00 alarm"
-        }) {
-            Text("What time is it?")
+            summary?.let { s ->
+                Text("Events found: ${s.totalEvents}")
+                Text("App opens: ${s.appOpens}")
+                Text("Unlocks: ${s.unlocks}")
+                Text("Screen turned on: ${s.screenOns}")
+                Text("Oldest event: ${s.oldestEventTime?.let { formatDateTime(it) } ?: "none"}")
+            }
         }
-        Text(text = sinceAlarmText)
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun TimeScreenPreview() {
-    HabitAppTheme {
-        TimeScreen()
     }
 }
