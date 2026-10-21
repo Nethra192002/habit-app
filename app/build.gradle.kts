@@ -1,3 +1,11 @@
+import java.util.Properties
+
+// Reads local.properties so the app can use the URL and key without them being in Git
+val localProps = Properties().apply {
+    val f = rootProject.file("local.properties")
+    if (f.exists()) f.inputStream().use { load(it) }
+}
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -16,7 +24,8 @@ android {
         targetSdk = 37
         versionCode = 1
         versionName = "1.0"
-
+        buildConfigField("String", "API_URL", "\"${localProps.getProperty("api.url", "")}\"")
+        buildConfigField("String", "INGEST_TOKEN", "\"${localProps.getProperty("ingest.token", "")}\"")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -34,6 +43,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 

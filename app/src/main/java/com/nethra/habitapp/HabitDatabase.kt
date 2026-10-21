@@ -39,6 +39,10 @@ interface UsageEventDao {
 
     @Query("SELECT * FROM usage_events ORDER BY timestamp")
     suspend fun getAll(): List<UsageEventEntity>
+
+    // Events from a given time onwards, oldest first, a limited number at a time
+    @Query("SELECT * FROM usage_events WHERE timestamp >= :since ORDER BY timestamp LIMIT :limit")
+    suspend fun eventsSince(since: Long, limit: Int): List<UsageEventEntity>
 }
 
 // The database itself

@@ -30,6 +30,7 @@ import kotlinx.coroutines.launch
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        scheduleSync(this)
         enableEdgeToEdge()
         setContent {
             HabitAppTheme {
@@ -93,11 +94,16 @@ fun UsageScreen(modifier: Modifier = Modifier) {
     }
 }
 
-// Saves new events, then describes what the database holds
+// Saves new events, uploads them, then describes what happened
 suspend fun saveAndDescribe(context: Context): String {
     val added = syncUsageEvents(context)
+    val upload = runCatching { uploadNewEvents(context) }
     val dao = HabitDatabase.get(context).usageEventDao()
     val total = dao.count()
     val oldest = dao.oldestTimestamp()?.let { formatDateTime(it) } ?: "—"
-    return "Saved $added new events.\nDatabase holds $total events, going back to $oldest."
+    val uploadText = upload.fold(
+        onSuccess = { "Uploaded $it new events to the cloud." },
+        onFailure = { "Upload failed: ${it.message}" }
+    )
+    return "Saved $added new events.\n$uploadText\nDatabase holds $total events, going back to $oldest."
 }
