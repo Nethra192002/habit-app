@@ -90,6 +90,7 @@ fun UsageScreen(modifier: Modifier = Modifier) {
                 Text("Export CSV")
             }
             Text(status)
+            LabelSection()
         }
     }
 }
