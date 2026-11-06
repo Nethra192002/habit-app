@@ -64,7 +64,7 @@ fun LabelSection() {
             Text("How was this one?", style = MaterialTheme.typography.titleMedium)
             Text(
                 "${current.apps.split(", ").joinToString(" + ") { APP_NAMES[it] ?: it }} · " +
-                        "${formatDateTime(current.startedMs)} · ${current.minutes} min"
+                        "${formatDateTime(current.startedMs)} (${daysAgo(current.startedMs)}) · ${current.minutes} min"
             )
 
             // Four buttons, two per row
@@ -94,5 +94,17 @@ fun LabelSection() {
             Text("${queue.size} left", style = MaterialTheme.typography.bodySmall)
             if (message.isNotEmpty()) Text(message)  // only shows if saving failed
         }
+    }
+}
+
+// "today", "yesterday" or "12 days ago", by calendar day on the phone
+private fun daysAgo(millis: Long): String {
+    val zone = java.time.ZoneId.systemDefault()
+    val then = java.time.Instant.ofEpochMilli(millis).atZone(zone).toLocalDate()
+    val days = java.time.temporal.ChronoUnit.DAYS.between(then, java.time.LocalDate.now(zone))
+    return when (days) {
+        0L -> "today"
+        1L -> "yesterday"
+        else -> "$days days ago"
     }
 }

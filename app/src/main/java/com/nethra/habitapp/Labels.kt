@@ -20,7 +20,8 @@ enum class Outcome(val button: String, val code: String) {
     ALL_GOOD("All good", "all_good"),
     BIT_OVER("Bit longer", "bit_over"),
     LOST_TRACK("Lost track", "lost_track"),
-    NOT_REAL("Doesn't count", "not_real")
+    NOT_REAL("Doesn't count", "not_real"),
+    UNSURE("Can't remember", "unsure")
 }
 
 // Asks the server for recent feed episodes you haven't answered yet
