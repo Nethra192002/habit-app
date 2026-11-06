@@ -17,7 +17,7 @@ data class SessionToLabel(
 
 // The four answers. `button` is what you see; `code` is what the database stores.
 enum class Outcome(val button: String, val code: String) {
-    INTENDED("Meant to", "intended"),
+    ALL_GOOD("All good", "all_good"),
     BIT_OVER("Bit longer", "bit_over"),
     LOST_TRACK("Lost track", "lost_track"),
     NOT_REAL("Doesn't count", "not_real")

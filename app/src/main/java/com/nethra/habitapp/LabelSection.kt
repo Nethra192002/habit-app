@@ -26,7 +26,10 @@ private val APP_NAMES = mapOf(
     "com.google.android.youtube" to "YouTube",
     "com.pinterest" to "Pinterest",
     "com.netflix.mediaclient" to "Netflix",
-    "com.linkedin.android" to "LinkedIn"
+    "com.linkedin.android" to "LinkedIn",
+    "com.anthropic.claude" to "Claude",
+    "com.netflix.NGP.Pandora" to "Netflix game",
+    "com.nytimes.crossword" to "NYT games"
 )
 
 // Shows one unanswered session at a time with the four answer buttons
