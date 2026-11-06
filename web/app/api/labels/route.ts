@@ -40,11 +40,13 @@ export async function GET(req: NextRequest) {
   );
 }
 
-// POST: the phone sends one answer — did this session run longer than meant?
+/// POST: the phone sends one answer about a session
+const OUTCOMES = ["intended", "bit_over", "lost_track", "not_real"];
+
 type IncomingLabel = {
   startedMs: number;
   packageName: string;
-  overran: boolean;
+  outcome: string;
 };
 
 export async function POST(req: NextRequest) {
@@ -56,18 +58,18 @@ export async function POST(req: NextRequest) {
   if (
     typeof label.startedMs !== "number" ||
     typeof label.packageName !== "string" ||
-    typeof label.overran !== "boolean"
+    !OUTCOMES.includes(label.outcome)
   ) {
     return NextResponse.json({ error: "bad label" }, { status: 400 });
   }
 
   // Answering the same session twice replaces the old answer
   await sql.query(
-    `INSERT INTO session_labels (session_start, package_name, overran)
+    `INSERT INTO session_labels (session_start, package_name, outcome)
      VALUES (to_timestamp($1 / 1000.0), $2, $3)
      ON CONFLICT (session_start, package_name)
-     DO UPDATE SET overran = EXCLUDED.overran, labelled_at = now()`,
-    [label.startedMs, label.packageName, label.overran]
+     DO UPDATE SET outcome = EXCLUDED.outcome, labelled_at = now()`,
+    [label.startedMs, label.packageName, label.outcome]
   );
 
   return NextResponse.json({ ok: true });
