@@ -6,8 +6,9 @@ function authorised(req: NextRequest) {
   return req.headers.get("authorization") === `Bearer ${process.env.INGEST_TOKEN}`;
 }
 
-// GET: the phone asks "which feed episodes should I ask about?"
-// Episodes with 10+ feed minutes from the last 2 days that have no answer yet.
+// GET: the phone asks "which episodes should I ask about?"
+// Every unanswered episode (feed, watch, games, drift) with 10+ active minutes, newest first.
+// No time window: you skip ones you can't remember with "Can't remember" (unsure).
 // Medium ones are included too, so the model also learns what "fine" looks like.
 export async function GET(req: NextRequest) {
   if (!authorised(req)) {
@@ -20,12 +21,13 @@ export async function GET(req: NextRequest) {
             ROUND(e.active_minutes) AS minutes,
             e.apps
      FROM episodes e
-     LEFT JOIN episode_labels l ON l.episode_start = e.started_at
+     -- an episode counts as answered if any saved answer overlaps it in time
+     LEFT JOIN episode_labels l
+       ON l.episode_start < e.ended_at AND l.episode_end > e.started_at
      WHERE e.active_minutes >= 10
-       AND e.started_at > now() - interval '2 days'
        AND l.episode_start IS NULL
      ORDER BY e.started_at DESC
-     LIMIT 20`
+     LIMIT 300`
   );
 
   return NextResponse.json(
@@ -39,7 +41,7 @@ export async function GET(req: NextRequest) {
 }
 
 // POST: the phone sends one answer about an episode
-const OUTCOMES = ["all_good", "bit_over", "lost_track", "not_real"];
+const OUTCOMES = ["all_good", "bit_over", "lost_track", "not_real", "unsure"];
 
 type IncomingLabel = {
   startedMs: number;
