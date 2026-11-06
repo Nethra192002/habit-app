@@ -17,11 +17,11 @@ export async function GET(req: NextRequest) {
   const rows = await sql.query(
     `SELECT (EXTRACT(EPOCH FROM e.started_at) * 1000)::bigint AS started_ms,
             (EXTRACT(EPOCH FROM e.ended_at) * 1000)::bigint   AS ended_ms,
-            ROUND(e.feed_minutes) AS minutes,
+            ROUND(e.active_minutes) AS minutes,
             e.apps
-     FROM feed_episodes e
+     FROM episodes e
      LEFT JOIN episode_labels l ON l.episode_start = e.started_at
-     WHERE e.feed_minutes >= 10
+     WHERE e.active_minutes >= 10
        AND e.started_at > now() - interval '2 days'
        AND l.episode_start IS NULL
      ORDER BY e.started_at DESC
@@ -39,7 +39,7 @@ export async function GET(req: NextRequest) {
 }
 
 // POST: the phone sends one answer about an episode
-const OUTCOMES = ["intended", "bit_over", "lost_track", "not_real"];
+const OUTCOMES = ["all_good", "bit_over", "lost_track", "not_real"];
 
 type IncomingLabel = {
   startedMs: number;
