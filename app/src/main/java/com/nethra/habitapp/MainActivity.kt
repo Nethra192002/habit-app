@@ -26,11 +26,20 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.nethra.habitapp.ui.theme.HabitAppTheme
 import kotlinx.coroutines.launch
-
+import android.Manifest
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         scheduleSync(this)
+        createRobotChannel(this)
+        if (hasUsageAccess(this)) {
+            startForegroundService(Intent(this, WatcherService::class.java))
+        }
         enableEdgeToEdge()
         setContent {
             HabitAppTheme {
@@ -48,7 +57,15 @@ fun UsageScreen(modifier: Modifier = Modifier) {
     val scope = rememberCoroutineScope()
     var hasAccess by remember { mutableStateOf(hasUsageAccess(context)) }
     var status by remember { mutableStateOf("") }
-
+    // Ask once for permission to show notifications (Android 13+)
+    val notifLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { }
+    LaunchedEffect(Unit) {
+        if (Build.VERSION.SDK_INT >= 33 && !canNotify(context)) {
+            notifLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
     // Runs on its own whenever the screen opens with access granted
     LaunchedEffect(hasAccess) {
         if (hasAccess) {
@@ -89,6 +106,38 @@ fun UsageScreen(modifier: Modifier = Modifier) {
             }) {
                 Text("Export CSV")
             }
+
+            Button(onClick = {
+                scope.launch {
+                    status = "Checking…"
+                    val model = loadRiskModel(context)
+                    if (model == null) {
+                        status = "Couldn't load the model."
+                        return@launch
+                    }
+                    val snap = withContext(Dispatchers.IO) { liveSnapshot(context, model) }
+                    // "What if you opened Instagram right now?"
+                    val risk = model.score(
+                        model.featuresFor(
+                            startMs = System.currentTimeMillis(),
+                            gapMin = null,
+                            minsTodayBefore = snap.minsTodayBefore,
+                            episodesTodayBefore = snap.episodesTodayBefore,
+                            firstCategory = "feed"
+                        )
+                    )
+                    val lastTick = context.getSharedPreferences("watcher", Context.MODE_PRIVATE)
+                        .getLong("lastTick", 0L)
+                    val tickText = if (lastTick == 0L) "never" else formatDateTime(lastTick)
+                    status = "Watcher last checked: $tickText\nModel v${model.id} · today so far: ${snap.episodesTodayBefore} episodes, " +
+                            "${snap.minsTodayBefore.toInt()} min\n" +
+                            "If you opened Instagram now: risk ${"%.2f".format(risk)} " +
+                            "(robot speaks above ${"%.2f".format(model.threshold)})"
+                }
+            }) {
+                Text("Check risk now")
+            }
+
             Text(status)
             LabelSection()
         }

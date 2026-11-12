@@ -21,7 +21,7 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 
 // Friendly names for the feed apps; anything else shows its package name
-private val APP_NAMES = mapOf(
+val APP_NAMES = mapOf(
     "com.instagram.android" to "Instagram",
     "com.google.android.youtube" to "YouTube",
     "com.pinterest" to "Pinterest",
