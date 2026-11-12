@@ -17,6 +17,14 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ error: "no model yet" }, { status: 404 });
     }
 
+    // Which apps count, and as what. The phone needs this to follow episodes live,
+    // and it stays in sync with Neon: change a category there, the phone follows.
+    const cats = await sql.query(
+        `SELECT package_name, category FROM app_categories
+     WHERE category IN ('feed', 'watch', 'games', 'drift')`
+    );
+    const categories = Object.fromEntries(cats.map((r) => [r.package_name, r.category]));
+
     // id lets the phone tell whether it already has this version
-    return NextResponse.json({ id: rows[0].id, ...rows[0].params });
+    return NextResponse.json({ id: rows[0].id, ...rows[0].params, categories });
 }
