@@ -16,6 +16,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import org.json.JSONObject
 
 // Runs in the background and checks every 30 seconds whether a nudge is due
 class WatcherService : Service() {
@@ -59,8 +60,13 @@ class WatcherService : Service() {
 
     private suspend fun tick() {
         val now = System.currentTimeMillis()
+
         // Heartbeat: remember when the watcher last ran, so the app can show it
         getSharedPreferences("watcher", MODE_PRIVATE).edit().putLong("lastTick", now).apply()
+
+        // Send any decisions still waiting (does nothing if the queue is empty)
+        runCatching { flushDecisions(this) }
+
         // Refresh the model every 6 hours, so a retrain in Python reaches the phone
         if (model == null || now - modelLoadedAt > 6 * 3_600_000L) {
             loadRiskModel(this)?.let { model = it; modelLoadedAt = now }
@@ -76,15 +82,39 @@ class WatcherService : Service() {
         decidedEpisode = ep.startMs                     // judge each episode once, at minute 5
         val risk = m.score(m.featuresFor(ep.startMs, snap.gapMin,
             snap.minsTodayBefore, snap.episodesTodayBefore, ep.firstCategory))
-        if (risk < m.threshold) return                  // looks fine: stay quiet
+        val minutes = ep.activeMs / 60_000.0
+
+        // Writes this decision to the queue, whatever it was
+        fun record(action: String, line: String?) = queueDecision(this, JSONObject().apply {
+            put("decidedMs", now)
+            put("episodeStartMs", ep.startMs)
+            put("firstApp", ep.firstApp)
+            put("firstCategory", ep.firstCategory)
+            put("activeMinutes", minutes)
+            put("risk", risk)
+            put("threshold", m.threshold)
+            put("modelId", m.id)
+            put("action", action)
+            put("line", line ?: JSONObject.NULL)
+        })
+
+        if (risk < m.threshold) {
+            record("quiet_low_risk", null)             // looks fine: stay quiet, but note it
+            return
+        }
 
         // Max 3 nudges in any hour
         while (recentNudges.isNotEmpty() && now - recentNudges.first() > 3_600_000L) recentNudges.removeFirst()
-        if (recentNudges.size >= 3) return
+        if (recentNudges.size >= 3) {
+            record("quiet_hourly_cap", null)
+            return
+        }
         recentNudges.addLast(now)
 
-        val app = APP_NAMES[ep.firstApp] ?: "this"
-        robotSay(this, robotLine((ep.activeMs / 60_000L).toInt(), app))
+        val line = robotLine(minutes.toInt(), APP_NAMES[ep.firstApp] ?: "this")
+        robotSay(this, line)
+        record("nudged", line)
+        runCatching { flushDecisions(this) }           // send it straight away
     }
 
     override fun onDestroy() {

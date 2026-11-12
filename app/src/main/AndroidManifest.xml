@@ -30,7 +30,7 @@
             </intent-filter>
         </activity>
         <service
-            android:name=".WatcherService"
+            android:name="WatcherService"
             android:exported="false"
             android:foregroundServiceType="specialUse">
             <property
