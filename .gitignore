@@ -16,3 +16,4 @@ local.properties
 
 .vercel
 .env*
+.vscode/
